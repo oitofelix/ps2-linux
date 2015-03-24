@@ -8,7 +8,9 @@ description: >
   support, wrote SBIOS and Linux Multi-tap pad drivers, and upgraded
   kernelloader build system's png2rgb image conversion tool to use
   libpng's 1.5 API.
-tags: article, free software, GPG, SSH, PGP, cryptography
+tags: >
+  Linux device driver programming, png2rgb, libpng, TGE, SBIOS,
+  IRX, C, patch, PS2 homebrew, XDMCP, NFS
 license: CC BY-SA 4.0
 layout: oitofelix-homepage
 #base: http://oitofelix.github.io
