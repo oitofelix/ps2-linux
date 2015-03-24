@@ -1,0 +1,19 @@
+*** loader/loader.c.~1.45.~	2012-02-29 21:23:18.000000000 -0300
+--- loader/loader.c	2012-06-21 03:40:11.869659353 -0300
+***************
+*** 731,737 ****
+  					return -3;
+  				}
+  
+! 				last = dest + size;
+  				if (highest != NULL) {
+  					if (*highest < last) {
+  						*highest = last;
+--- 731,737 ----
+  					return -3;
+  				}
+  
+! 				last = dest + filesize;
+  				if (highest != NULL) {
+  					if (*highest < last) {
+  						*highest = last;

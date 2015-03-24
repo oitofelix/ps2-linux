@@ -1,0 +1,34 @@
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/mc.c.old	2012-06-17 10:41:22.498498672 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/mc.c	2012-06-17 13:32:58.466781354 -0300
+***************
+*** 228,233 ****
+--- 228,237 ----
+  		info->blocksize = 1024;		/* XXX, I donna */
+  		info->totalblocks = 1024 * 8;	/* XXX, 8MB */
+  	}
++ 	if (type == PS2MC_TYPE_PS1) {
++ 		info->blocksize = 1024 * 8;
++ 		info->totalblocks = 16;	     /* 16 blocks of 8KB (128 KB) */
++ 	}
+  
+  	return (0);
+  }
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/mcfs/inode.c.old	2012-06-17 11:46:10.551891314 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/mcfs/inode.c	2012-06-17 13:06:55.634319449 -0300
+***************
+*** 302,308 ****
+  	k_statfs->f_type = PS2MCFS_SUPER_MAGIC;
+  	k_statfs->f_namelen = PS2MC_NAME_MAX;
+  
+! 	if (info.type == PS2MC_TYPE_PS2) {
+  		k_statfs->f_bsize = info.blocksize;
+  		k_statfs->f_blocks = info.totalblocks;
+  		k_statfs->f_bfree = info.freeblocks;
+--- 302,308 ----
+  	k_statfs->f_type = PS2MCFS_SUPER_MAGIC;
+  	k_statfs->f_namelen = PS2MC_NAME_MAX;
+  
+! 	if ((info.type == PS2MC_TYPE_PS2) || (info.type == PS2MC_TYPE_PS1)) {
+  		k_statfs->f_bsize = info.blocksize;
+  		k_statfs->f_blocks = info.totalblocks;
+  		k_statfs->f_bfree = info.freeblocks;

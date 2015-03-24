@@ -1,0 +1,20 @@
+#markdown pre {
+    background: lightgray;
+    border: 2px solid dimgray;
+    padding: 8px;
+}
+
+#markdown blockquote {
+    background-color: pink;
+    border: solid magenta 1px;
+    padding: 8px;
+    margin: 0px;
+}
+
+#markdown blockquote::before {
+    font-weight: bold;
+}
+
+#markdown blockquote::before {
+    content: "Mega Man";
+}

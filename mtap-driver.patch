@@ -1,0 +1,311 @@
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/Kconfig.~1.7.~	2012-05-27 17:28:49.000000000 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/Kconfig	2012-06-23 18:46:00.573503794 -0300
+***************
+*** 30,35 ****
+--- 30,40 ----
+  	default y
+  	depends on SONY_PS2
+  
++ config PS2_MTAP
++        tristate "Support for PS2 Multitap"
++        default y
++        depends on SONY_PS2
++ 
+  config PS2_CDVD
+  	tristate "Support for PS2 CD/DVD ROM drive"
+  	depends on SONY_PS2
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/Makefile.~1.8.~	2012-05-27 17:28:49.000000000 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/Makefile	2012-06-23 18:48:43.769463566 -0300
+***************
+*** 6,11 ****
+--- 6,12 ----
+  ps2sd-objs			:= sd.o sdmixer.o sdcnv.o iopmem.o
+  ps2js-objs			:= joystick.o
+  mcfs-objs			:= mcfs/ps2mcfs.o
++ ps2mtap-objs			:= mtap.o
+  
+  obj-$(CONFIG_PS2_ETHER_SMAP)	+= ps2smap.o
+  obj-$(CONFIG_PS2_ETHER_SMAPRPC)	+= ps2smaprpc.o
+***************
+*** 15,20 ****
+--- 16,22 ----
+  obj-$(CONFIG_PS2_SD)			+= ps2sd.o
+  obj-$(CONFIG_PS2_MC)			+= ps2mc.o
+  obj-$(CONFIG_PS2_PAD_JS)		+= ps2js.o
++ obj-$(CONFIG_PS2_MTAP)			+= ps2mtap.o
+  
+  # Load module ps2mcfs after ps2mc. Don't change order in Makefile!
+  obj-y							+= mcfs/
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/mtap.c.old	2012-07-04 19:03:18.358322139 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/mtap.c	2012-07-04 04:00:46.936308076 -0300
+***************
+*** 0 ****
+--- 1,268 ----
++ /*
++  *  PlayStation 2 Multitap driver
++  *
++  *        Copyright (C) 2012        Bruno Félix Rezende Ribeiro (oitofelix) <oitofelix@gmail.com>
++  *
++  *  This file is subject to the terms and conditions of the GNU General
++  *  Public License Version 2. See the file "COPYING" in the main
++  *  directory of this archive for more details.
++  *
++  */
++ 
++ #include <linux/module.h>
++ 
++ #include <linux/kernel.h>
++ #include <linux/init.h>
++ 
++ #include <linux/sched.h>
++ 
++ #include <asm/mach-ps2/sifdefs.h>
++ 
++ MODULE_AUTHOR("Bruno Félix Rezende Ribeiro (oitofelix) <oitofelix@gmail.com>");
++ MODULE_DESCRIPTION("PlayStation 2 Multitap driver");
++ MODULE_LICENSE("GPL");
++ 
++ #define MTAPSERVER_PORT_OPEN	  0x80000901
++ #define MTAPSERVER_PORT_CLOSE	  0x80000902
++ #define MTAPSERVER_GET_CONNECTION 0x80000903
++ #define MTAPSERVER_GET_SLOT_NUMBER  0x800009FE
++ #define MTAPSERVER_CHANGE_SLOT	  0x800009FF
++ 
++ #define ALIGNMENT 64
++ 
++ #define RPC_BUFFER_SIZE 32
++ 
++ #define NPORTS 2
++ #define BASE_PORT 0
++ 
++ #define PORT_PAR 0
++ #define REPLY 1
++ 
++ #define RPC_NUMBER 1
++ #define SEND_SIZE 4
++ #define RECEIVE_SIZE 8
++ 
++ #define REPLY_FAILURE 0
++ #define REPLY_SUCCESS 1
++ 
++ #define RETURN_FAILURE -1
++ #define RETURN_SUCCESS 0
++ 
++ static ps2sif_clientdata_t cdataPortOpen __attribute__((aligned (ALIGNMENT)));
++ static ps2sif_clientdata_t cdataPortClose __attribute__((aligned (ALIGNMENT)));
++ static ps2sif_clientdata_t cdataGetConnection __attribute__((aligned (ALIGNMENT)));
++ static ps2sif_clientdata_t cdataGetSlotNumber __attribute__((aligned (ALIGNMENT)));
++ static ps2sif_clientdata_t cdataChangeSlot __attribute__((aligned (ALIGNMENT)));
++ static u32 ps2mtapRpcBuffer[RPC_BUFFER_SIZE] __attribute__((aligned (ALIGNMENT)));
++ 
++ static unsigned int ps2mtap_portOpen[NPORTS], ps2mtap_initialized = false;
++ 
++ static char *status_messages[] = {
++   "Success",
++   "Resource temporarily unavailable",
++   "Multitap RPC interface failed to initialize",
++   "Multitap RPC interface already initialized",
++   "Multitap RPC interface not initialized",
++   "Failed to open port",
++   "Failed to close port",
++   "Port open already",
++   "Port not open"
++ };
++ 
++ enum ps2mtap_status {
++   success,
++   resource_temporarily_unavailable,
++   failed_to_initialize,
++   already_initialized,
++   not_initialized,
++   failed_to_open_port,
++   failed_to_close_port,
++   port_open_already,
++   port_not_open
++ };
++ 
++ /* static int __init ps2mtap_init(void) */
++ /* static void __exit ps2mtap_cleanup(void) */
++ 
++ static int ps2mtap_setuprpc(void);
++ static int ps2mtap_portopen(unsigned int port);
++ static int ps2mtap_portclose(unsigned int port);
++ static int ps2mtap_getconnection(unsigned int port);
++   
++ static void ps2mtap_rpcend_notify(void *arg);
++ static int status_message (enum ps2mtap_status status_type);
++ 
++ static int __init ps2mtap_init(void)
++ {
++   int i;
++ 
++   if (ps2mtap_setuprpc()) {
++     printk(KERN_ERR "ps2mtap: Failed to initialize multitap support\n");
++     return -EIO;
++   }
++ 
++   for (i = BASE_PORT; i < NPORTS; i++)
++     if (ps2mtap_portopen(i)) {
++     printk(KERN_ERR "ps2mtap: Failed to initialize multitap support\n");
++     return -EIO;
++   }
++ 
++   /* In theory the following conditional is necessary to
++      correct pad's initialization, but, in practice, when it's
++      commented out we get multitap hotplug without any side
++      effect! */
++ 
++   if (!ps2mtap_getconnection(i)) ps2mtap_portclose(i);
++ 
++   return RETURN_SUCCESS;
++ }
++ 
++ static void __exit ps2mtap_cleanup(void)
++ {
++   int i;
++   for (i = 0; i < NPORTS; i++) {
++     if (ps2mtap_portclose(i))
++       printk(KERN_WARNING "ps2mtap: impossible to close multitap port %d\n", i);
++   }
++ }
++ 
++ static int ps2mtap_setuprpc(void)
++ {
++   struct completion compl;
++   int i;
++ 
++   if (ps2mtap_initialized) return status_message (already_initialized);
++ 
++   for (i = BASE_PORT; i < NPORTS; i++) ps2mtap_portOpen[i] = false;
++ 
++   printk(KERN_INFO "ps2mtap: PS2 Multitap driver\n");
++ 
++   cdataPortOpen.serve = false;
++   init_completion(&compl);
++   if (ps2sif_bindrpc (&cdataPortOpen, MTAPSERVER_PORT_OPEN, SIF_RPCM_NOWAIT,
++ 		      ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion(&compl);
++   if (!cdataPortOpen.serve) return status_message (failed_to_initialize);
++ 
++   cdataPortClose.serve = false;
++   init_completion(&compl);
++   if (ps2sif_bindrpc (&cdataPortClose, MTAPSERVER_PORT_CLOSE, SIF_RPCM_NOWAIT,
++ 		      ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion(&compl);
++   if (!cdataPortClose.serve) return status_message (failed_to_initialize);
++ 
++   cdataGetConnection.serve = false;
++   init_completion(&compl);
++   if (ps2sif_bindrpc (&cdataGetConnection, MTAPSERVER_GET_CONNECTION, SIF_RPCM_NOWAIT,
++ 		      ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion(&compl);
++   if (!cdataGetConnection.serve) return status_message (failed_to_initialize);
++ 
++   cdataGetSlotNumber.serve = false;
++   init_completion(&compl);
++   if (ps2sif_bindrpc (&cdataGetSlotNumber, MTAPSERVER_GET_SLOT_NUMBER, SIF_RPCM_NOWAIT,
++ 		      ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion(&compl);
++   if (!cdataGetSlotNumber.serve) return status_message (failed_to_initialize);
++ 
++   cdataChangeSlot.serve = false;
++   init_completion(&compl);
++   if (ps2sif_bindrpc (&cdataChangeSlot, MTAPSERVER_CHANGE_SLOT, SIF_RPCM_NOWAIT,
++ 		      ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion(&compl);
++   if (!cdataChangeSlot.serve) return status_message (failed_to_initialize);
++ 
++   ps2mtap_initialized = true;
++ 
++   printk(KERN_INFO "ps2mtap: Multitap RPC interface started\n");
++ 
++   return RETURN_SUCCESS;
++ }
++ 
++ static int ps2mtap_portopen(unsigned int port)
++ {
++   struct completion compl;
++ 
++   if (!ps2mtap_initialized) return status_message (not_initialized);
++   if (ps2mtap_portOpen[port]) return status_message (port_open_already);
++ 
++   ps2mtapRpcBuffer[PORT_PAR] = port;
++   init_completion(&compl);
++   if (ps2sif_callrpc(&cdataPortOpen, RPC_NUMBER, SIF_RPCM_NOWAIT,
++   		     &ps2mtapRpcBuffer, SEND_SIZE, ps2mtapRpcBuffer, RECEIVE_SIZE,
++   		     &ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     status_message (resource_temporarily_unavailable);
++   wait_for_completion (&compl);
++ 
++   if (ps2mtapRpcBuffer[REPLY] == REPLY_SUCCESS)
++     {
++       ps2mtap_portOpen[port] = true;
++       printk(KERN_INFO "ps2mtap: Openned port %d\n", port);
++       return RETURN_SUCCESS;
++     }
++   else return status_message (failed_to_open_port);
++ 
++   return RETURN_SUCCESS;    
++ }
++ 
++ static int ps2mtap_portclose(unsigned int port)
++ {
++   struct completion compl;
++ 
++   if (!ps2mtap_initialized) return status_message (not_initialized);
++   if (!ps2mtap_portOpen[port]) return status_message (port_not_open);
++ 
++   ps2mtapRpcBuffer[PORT_PAR] = port;
++   init_completion (&compl);
++   if (ps2sif_callrpc (&cdataPortClose, RPC_NUMBER, SIF_RPCM_NOWAIT,
++ 		     &ps2mtapRpcBuffer, SEND_SIZE, ps2mtapRpcBuffer, RECEIVE_SIZE,
++ 		     &ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     return status_message (resource_temporarily_unavailable);
++   wait_for_completion (&compl);
++ 
++   if (ps2mtapRpcBuffer[REPLY] == REPLY_SUCCESS)
++     {
++       ps2mtap_portOpen[port] = false;
++       printk (KERN_INFO "ps2mtap: Closed port %d\n", port);
++       return RETURN_SUCCESS;
++     }
++   else return status_message (failed_to_close_port);
++ }
++ 
++ static int ps2mtap_getconnection(unsigned int port)
++ {
++   struct completion compl;
++ 
++   if (!ps2mtap_initialized) return status_message (not_initialized);
++   if (!ps2mtap_portOpen[port]) return status_message (port_not_open);
++ 
++   ps2mtapRpcBuffer[PORT_PAR] = port;
++   init_completion (&compl);
++   if (ps2sif_callrpc (&cdataGetConnection, RPC_NUMBER, SIF_RPCM_NOWAIT,
++ 		     &ps2mtapRpcBuffer, SEND_SIZE, ps2mtapRpcBuffer, RECEIVE_SIZE,
++ 		     &ps2mtap_rpcend_notify, &compl) < RETURN_SUCCESS)
++     return status_message (resource_temporarily_unavailable);
++   wait_for_completion (&compl);
++ 
++   return ps2mtapRpcBuffer[REPLY];
++ }
++ 
++ static void ps2mtap_rpcend_notify (void *arg)
++ {
++   complete ((struct completion *) arg);
++   return;
++ }
++ 
++ static int status_message (enum ps2mtap_status status_type)
++ {
++   printk (KERN_ERR "ps2mtap: %s\n", status_messages[status_type]);
++   return (int) -status_type;
++ }
++ 
++ module_init (ps2mtap_init);
++ module_exit (ps2mtap_cleanup);

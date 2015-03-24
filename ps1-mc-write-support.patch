@@ -1,0 +1,19 @@
+*** linux-2.6.35.4-mipsel-ps2/drivers/ps2/mc.c.old	2012-06-16 22:29:25.327816973 -0300
+--- linux-2.6.35.4-mipsel-ps2/drivers/ps2/mc.c	2012-06-17 00:02:18.894137805 -0300
+***************
+*** 676,682 ****
+  
+  	res = ps2mclib_SetFileInfo(PS2MC_PORT(portslot), PS2MC_SLOT(portslot),
+  			       (char*)path, (char*)dirbuf, valid, &result);
+! 	if (res != 0 || result < 0) {
+  		/* error */
+  		printk("ps2mclib_SetDir() failed\n");
+  		res = -EIO;
+--- 676,682 ----
+  
+  	res = ps2mclib_SetFileInfo(PS2MC_PORT(portslot), PS2MC_SLOT(portslot),
+  			       (char*)path, (char*)dirbuf, valid, &result);
+! 	if (res != 0 || (result < 0 && result != -4)) {
+  		/* error */
+  		printk("ps2mclib_SetDir() failed\n");
+  		res = -EIO;
