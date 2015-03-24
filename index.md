@@ -1,7 +1,13 @@
 ---
 title: oitofelix - PlayStation 2 Linux
-description:
-
+description: >
+  Between June and July 2012 I worked with the PlayStation 2 Linux
+  developers of the PSX Scene community, collaborating and sharing
+  experiences, in order to improve the port of Linux 2.6 to the video
+  game console Sony PlayStation 2.  I improved the PS1 memory card
+  support, wrote SBIOS and Linux Multi-tap pad drivers, and upgraded
+  kernelloader build system's png2rgb image conversion tool to use
+  libpng's 1.5 API.
 tags: article, free software, GPG, SSH, PGP, cryptography
 license: CC BY-SA 4.0
 layout: oitofelix-homepage
