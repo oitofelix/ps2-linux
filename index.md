@@ -30,7 +30,7 @@ __Table of contents__
 4. [PS1 memory card block usage reporting patch](#ps1-memory-card-block-usage-reporting-patch)
 5. [`png2rgb` patch](#png2rgb-patch)
 6. [The SBIOS size problem](#the-sbios-size-problem)
-7. [SBIOS Multi-tap pad driver](#original-sbios-multi-tap-pad-driver)
+7. [SBIOS Multi-tap pad driver](#sbios-multi-tap-pad-driver)
 8. [Linux Multi-tap pad driver](#linux-multi-tap-pad-driver)
 
 
