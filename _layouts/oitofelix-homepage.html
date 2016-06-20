@@ -46,7 +46,7 @@
     <meta name="keywords" content="{{ page.tags }}" />
 
     <!-- External resources -->
-    <link rel="stylesheet" href="{{ page.base_local | append: site.baseurl | append: page.url | remove: '.html' | append: '.css'}}" />
+    <link rel="stylesheet" href="{{ page.base_local | append: site.baseurl | append: '/index.html' | remove: '.html' | append: '.css'}}" />
 
     {% unless page.news == null %}
     <script src="/scripts/jquery-1.6.4.min.js"></script>
@@ -110,21 +110,21 @@
 	<div>
 	  {{ content }}
 	</div>
-	  
+
 	<footer>
 	  <div id="copyright-notice">
 
 	    {% case page.author %}
 	      {% when 'tilim' %}
                 <p>
-	          <strong>Copyright © 2015 César Augustus de Souza Garcia</strong>
+	          <strong>Copyright © 2016 César Augustus de Souza Garcia</strong>
 	        </p>
 	      {% else %}
 	        <p>
-	          <strong>Copyright © 2015 Bruno Félix Rezende Ribeiro</strong>
+	          <strong>Copyright © 2016 Bruno Félix Rezende Ribeiro</strong>
 	        </p>
 	      {% endcase %}
-		
+
 	    <p>
 	      <!-- CC BY-ND 4.0 -->
 	      {% if page.license == 'CC BY-ND 4.0' %}
