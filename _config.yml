@@ -1,2 +1,2 @@
 baseurl: /ps2-linux
-highlighter: pygments
+highlighter: rouge
