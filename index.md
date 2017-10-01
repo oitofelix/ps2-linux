@@ -13,7 +13,7 @@ tags: >
   IRX, C, patch, PS2 homebrew, XDMCP, NFS
 license: CC BY-SA 4.0
 layout: oitofelix-homepage
-#base: http://oitofelix.github.io
+base: http://oitofelix.github.io
 #base_local: http://localhost:4000
 ---
 <div id="markdown" markdown="1">
@@ -31,15 +31,15 @@ leader developer of the porting project at that time.
 
 __Table of contents__
 
-1. [Initial experience report](#initial-experience-report)
-2. [XDMCP tutorial](#xdmcp-tutorial)
-3. [Development kernel report](#development-kernel-report)
-4. [PS1 memory card write support patch](#ps1-memory-card-write-support-patch)
-4. [PS1 memory card block usage reporting patch](#ps1-memory-card-block-usage-reporting-patch)
-5. [`png2rgb` patch](#png2rgb-patch)
-6. [The SBIOS size problem](#the-sbios-size-problem)
-7. [SBIOS Multi-tap pad driver](#sbios-multi-tap-pad-driver)
-8. [Linux Multi-tap pad driver](#linux-multi-tap-pad-driver)
+1. [Initial experience report](ps2-linux/#initial-experience-report)
+2. [XDMCP tutorial](ps2-linux/#xdmcp-tutorial)
+3. [Development kernel report](ps2-linux/#development-kernel-report)
+4. [PS1 memory card write support patch](ps2-linux/#ps1-memory-card-write-support-patch)
+4. [PS1 memory card block usage reporting patch](ps2-linux/#ps1-memory-card-block-usage-reporting-patch)
+5. [`png2rgb` patch](ps2-linux/#png2rgb-patch)
+6. [The SBIOS size problem](ps2-linux/#the-sbios-size-problem)
+7. [SBIOS Multi-tap pad driver](ps2-linux/#sbios-multi-tap-pad-driver)
+8. [Linux Multi-tap pad driver](ps2-linux/#linux-multi-tap-pad-driver)
 
 
 
